@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      target: development
+    volumes:
+      # Live reload
+      - ./src:/usr/app/src
+    environment:
+      NODE_ENV: development

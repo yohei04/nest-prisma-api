@@ -1,27 +1,46 @@
-FROM node:14 AS builder
-
-# Create app directory
-WORKDIR /app
-
-COPY package.json ./
-COPY yarn.lock ./
+# 
+# Base Image
+# 
+FROM node:16.14-alpine as base
+# RUN ["yarn", "global", "add", "@nestjs/cli"]
+WORKDIR /usr/app
+# Take advantange of docker caching
+COPY ["package.json", "yarn.lock", "./"]
 COPY tsconfig.json ./
 COPY tsconfig.build.json ./
 COPY prisma ./prisma/
-
-# Install app dependencies
-RUN yarn install
-
+RUN ["yarn", "install", "--pure-lockfile"]
+# Copy source files
 COPY . .
 
-RUN yarn build
+# 
+# Development Image
+# 
+FROM base as development
+WORKDIR /usr/app
+# Launch the application in watch mode (live reload)
+CMD ["yarn", "run", "start:dev"]
 
-FROM node:14
+# 
+# Build Image (for production only)
+# 
+FROM base as build
+WORKDIR /usr/app
+# Deletes the dist folder
+RUN ["yarn", "run", "prebuild"]
+# Build the application
+RUN ["yarn", "run", "build"]
 
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/yarn.lock ./
-COPY --from=builder /app/dist ./dist
-
-EXPOSE 3000
-CMD [ "yarn", "start:prod" ]
+# 
+# Production Image
+# 
+FROM node:16.14 as production
+WORKDIR /usr/app
+# Take advantange of docker caching
+COPY ["package.json", "yarn.lock", "./"]
+# Install production dependencies only
+RUN ["yarn", "install", "--prod"]
+# Copy dist folder from the build image
+COPY --from=build /usr/app/dist ./dist
+# Launch the application
+CMD ["node", "dist/main"]
