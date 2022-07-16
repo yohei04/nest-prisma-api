@@ -1,7 +1,7 @@
 # 
 # Base Image
 # 
-FROM node:16.16-alpine as base
+FROM node:16.16 as base
 # RUN ["yarn", "global", "add", "@nestjs/cli"]
 WORKDIR /usr/app
 # Take advantange of docker caching
